@@ -74,8 +74,8 @@ def get_queries_from_bucket (bucket, object_key):
 def handler (event, context): #arguments are passed as a json payload in 'event'
 
     date = datetime.datetime.now() #saving courrent date for s3_output
-    s3_output = 's3://aws-athena-query-results-518512136469-us-east-1' #de default bucket for athena query results
-    bucket = 'aws-athena-query-results-518512136469-us-east-1' #the bucket where queries are stored
+    s3_output = 's3://default-bucket' #de default bucket for athena query results
+    bucket = 'default-bucket' #the bucket where queries are stored
     queries_filename = event['queries_filename'] #the object-key
     account_number = event['account_number'] #the AWS account number to identify the database
     environment = event['environment'] #it must be 'dev', 'homolog' or 'prod'
