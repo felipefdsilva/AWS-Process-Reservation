@@ -38,49 +38,51 @@ def run_query(query, database, s3_output, date):
     status = check_query_status(response['QueryExecutionId']) #checks query's status
     print ("Query execution status: " + status) #prints query's status
     return response
-
+    
+#Function that checks query status (works like a waiter)
 def check_query_status (query_execution_id):
-    #client athena instantiation
-    client = boto3.client('athena')
-    #getting query execution status
-    status = client.get_query_execution(QueryExecutionId = query_execution_id)
+
+    client = boto3.client('athena') #client athena instantiation
+
+    status = client.get_query_execution(QueryExecutionId = query_execution_id) #getting query execution status
     #Dealing with queries execution outcomes
-    while (status['QueryExecution']['Status'] == 'QUEUED'):
+    while (status['QueryExecution']['Status'] == 'QUEUED'): #if query was not executed yet
         time.sleep(5) #waits 5 seconds
-        status = client.get_query_execution(QueryExecutionId = query_execution_id) #re-checks
-    while (status['QueryExecution']['Status'] == 'RUNNING'):
+        status = client.get_query_execution(QueryExecutionId = query_execution_id) #re-checks query status
+    while (status['QueryExecution']['Status'] == 'RUNNING'): #if query is running
         time.sleep(3)  #waits 3 seconds
-        status = client.get_query_execution(QueryExecutionId = query_execution_id) #re-checks
-    if (status['QueryExecution']['Status'] == 'FAILED'):
-        return "failed"
-    if (status['QueryExecution']['Status'] == 'CANCELLED'):
-        return "cancelled"
-    return "success"
+        status = client.get_query_execution(QueryExecutionId = query_execution_id) #re-checks query status
+    if (status['QueryExecution']['Status'] == 'FAILED'): #if query execution failed
+        return "failed" #return status
+    if (status['QueryExecution']['Status'] == 'CANCELLED'): #if query was cancelled
+        return "cancelled" #return status
+    return "success" #if query did not failed of was cacelled, than it was a success
 
 #Retrieves a queries list from a bucket stored file
 def get_queries_from_bucket (bucket, object_key):
     client = boto3.client('s3') #instantiates s3 client
 
-    response = client.get_object( #retrieving file object
+    response = client.get_object( #retrieving object from bucket
         Bucket=bucket,
         Key=object_key
     )
     queries = response['Body'].read().decode('utf-8') #retrieving object body (file content)
 
-    return queries.split('\n')
+    return queries.split('\n') #return all queries in a list
 
-def handler (event, context):
+#Handler function for AWS Lambda
+def handler (event, context): #arguments are passed as a json payload in 'event'
 
-    date = datetime.datetime.now()
-    s3_output = 's3://aws-athena-query-results-518512136469-us-east-1'
-    bucket = 'aws-athena-query-results-518512136469-us-east-1'
-    queries_filename = event['queries_filename']
-    account_number = event['account_number']
-    environment = event['environment']
+    date = datetime.datetime.now() #saving courrent date for s3_output
+    s3_output = 's3://aws-athena-query-results-518512136469-us-east-1' #de default bucket for athena query results
+    bucket = 'aws-athena-query-results-518512136469-us-east-1' #the bucket where queries are stored
+    queries_filename = event['queries_filename'] #the object-key
+    account_number = event['account_number'] #the AWS account number to identify the database
+    environment = event['environment'] #it must be 'dev', 'homolog' or 'prod'
 
-    queries = get_queries_from_bucket(bucket, queries_filename)
-    database = get_database (account_number, environment, s3_output, date)
+    queries = get_queries_from_bucket(bucket, queries_filename) #retrieving queries list
+    database = get_database (account_number, environment, s3_output, date) #getting database name
 
-    for query in queries:
-        print("Executing query: " + query)
-        response = run_query(query, database, s3_output, date)
+    for query in queries: #loop to run all queries
+        print("Executing query: " + query) #print query name for log purposes
+        response = run_query(query, database, s3_output, date) #runs query
