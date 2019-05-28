@@ -46,15 +46,15 @@ def check_query_status (query_execution_id):
 
     status = client.get_query_execution(QueryExecutionId = query_execution_id) #getting query execution status
     #Dealing with queries execution outcomes
-    while (status['QueryExecution']['Status'] == 'QUEUED'): #if query was not executed yet
+    while (status['QueryExecution']['Status']['State'] == 'QUEUED'): #if query was not executed yet
         time.sleep(5) #waits 5 seconds
         status = client.get_query_execution(QueryExecutionId = query_execution_id) #re-checks query status
-    while (status['QueryExecution']['Status'] == 'RUNNING'): #if query is running
+    while (status['QueryExecution']['Status']['State'] == 'RUNNING'): #if query is running
         time.sleep(3)  #waits 3 seconds
         status = client.get_query_execution(QueryExecutionId = query_execution_id) #re-checks query status
-    if (status['QueryExecution']['Status'] == 'FAILED'): #if query execution failed
+    if (status['QueryExecution']['Status']['State'] == 'FAILED'): #if query execution failed
         return "failed" #return status
-    if (status['QueryExecution']['Status'] == 'CANCELLED'): #if query was cancelled
+    if (status['QueryExecution']['Status']['State'] == 'CANCELLED'): #if query was cancelled
         return "cancelled" #return status
     return "success" #if query did not failed of was cacelled, than it was a success
 
@@ -71,18 +71,18 @@ def get_queries_from_bucket (bucket, object_key):
     return queries.split('\n') #return all queries in a list
 
 #Handler function for AWS Lambda
-def handler (event, context): #arguments are passed as a json payload in 'event'
+#def handler (event, context): #arguments are passed as a json payload in 'event'
 
-    date = datetime.datetime.now() #saving courrent date for s3_output
-    s3_output = 's3://default-bucket' #de default bucket for athena query results
-    bucket = 'default-bucket' #the bucket where queries are stored
-    queries_filename = event['queries_filename'] #the object-key
-    account_number = event['account_number'] #the AWS account number to identify the database
-    environment = event['environment'] #it must be 'dev', 'homolog' or 'prod'
+date = datetime.datetime.now() #saving courrent date for s3_output
+s3_output = 's3://default-bucket' #de default bucket for athena query results
+bucket = 'default-bucket' #the bucket where queries are stored
+queries_filename = event['queries_filename'] #the object-key
+account_number = event['account_number'] #the AWS account number to identify the database
+environment = event['environment'] #it must be 'dev', 'homolog' or 'prod'
 
-    queries = get_queries_from_bucket(bucket, queries_filename) #retrieving queries list
-    database = get_database (account_number, environment, s3_output, date) #getting database name
+queries = get_queries_from_bucket(bucket, queries_filename) #retrieving queries list
+database = get_database (account_number, environment, s3_output, date) #getting database name
 
-    for query in queries: #loop to run all queries
-        print("Executing query: " + query) #print query name for log purposes
-        response = run_query(query, database, s3_output, date) #runs query
+for query in queries: #loop to run all queries
+    print("Executing query: " + query) #print query name for log purposes
+    response = run_query(query, database, s3_output, date) #runs query
