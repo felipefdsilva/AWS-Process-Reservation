@@ -1,33 +1,38 @@
 import boto3
+import json #for debug
 
-def get_object_from_source (source_bucket, object_key):
-	client = boto3.client('s3')
+src_bucket = 'sulamerica.billing.us'
+dst_bucket = 'ipsense.sulamerica.billing.us'
 
-	response = client.get_object(
-        Bucket = bucket,
-        Key = object_key
-    )
-    return response
+session_src = boto3.Session(profile_name = 'gov-sulamerica')
+client_src = session_src.client('s3')
 
-def write_object_to_destination (destination_bucket, get_object_response, object_key):
-	client = boto3.client('s3')
+session_dst = boto3.Session(profile_name = 'temp-ipsense')
+client_dst = session_dst.client('s3')
 
-	response = client.put_object(
-		Bucket = destination_bucket,
-		Body = get_object_response['Body'],
-		Key = object_key
-	)
-	return response
+src_path = 'parquet/Billing_Parquet/Billing_Parquet/'
 
-def retrieve_objects_list (bucket):
-	client = boto3.client('s3')
+def copy_object(origin, destiny, object_key):
+	s3_object = client_src.get_object(Bucket = origin, Key = object_key)
+	client_dst.put_object (Bucket = destiny, Body = s3_object['Body'].read(), Key = object_key)
 
-	response = client.list_objects(
-		Bucket = bucket
-	)
-	return response
+src_obj_list = client_src.list_objects_v2(Bucket = src_bucket, Prefix = src_path)
+#print (json.dumps(src_obj_list, indent = 4, sort_keys = True, default=str))
 
-source_object_list = retrieve_objects_list('teste-felipe-source')
-destination_object_list = 
+for src_obj in src_obj_list['Contents']:
+	try:
+		dst_obj_metadata = client_dst.head_object(Bucket = dst_bucket, Key = src_obj['Key'])
+	except:
+		print ("There's no %s object in %s" %(src_obj['Key'], dst_bucket))
+		print ("Copying object")
 
-for s3_object in object_list:
+		copy_object(src_bucket, dst_bucket, src_obj['Key'])
+		dst_obj_metadata = {}
+
+	if (dst_obj_metadata != {}):
+		if (dst_obj_metadata['LastModified'] < src_obj['LastModified']):
+			print ("%s (origem): %s" %(src_obj['Key'], src_obj['LastModified']))
+			print ("%s (destino): %s" %(src_obj['Key'], dst_obj_metadata['LastModified']))
+			print ("Copying %s to %s" %(src_obj['Key'], dst_bucket))
+
+			copy_object(src_bucket, dst_bucket, src_obj['Key'])
