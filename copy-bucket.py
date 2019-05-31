@@ -4,11 +4,19 @@ import json #for debug
 src_bucket = 'sulamerica.billing.us'
 dst_bucket = 'ipsense.sulamerica.billing.us'
 
-session_src = boto3.Session(profile_name = 'gov-sulamerica')
-client_src = session_src.client('s3')
+session = boto3.Session(profile_name = 'gov-sulamerica')
 
-session_dst = boto3.Session(profile_name = 'temp-ipsense')
-client_dst = session_dst.client('s3')
+sulamerica_credentials = session.client('sts').assume_role ( 
+	RoleArn = 'arn:aws:iam::549718362122:role/ipsense-governanca-s3-reader-role',
+    RoleSessionName = 'ipsense-external-sulamerica'
+)['Credentials']
+
+client_src = session.client('s3', 
+	aws_access_key_id = sulamerica_credentials['AccessKeyId'], 
+	aws_secret_access_key = sulamerica_credentials['SecretAccessKey'], 
+	aws_session_token = sulamerica_credentials['SessionToken']
+)
+client_dst = session.client('s3')
 
 src_path = 'parquet/Billing_Parquet/Billing_Parquet/'
 

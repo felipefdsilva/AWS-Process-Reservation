@@ -11,15 +11,42 @@ reservation_duration = 94608000 #(31536000 | 94608000)
 target_instance_type = 'i3.xlarge'
 platform = 'Linux/UNIX (Amazon VPC)'
 offering_type = 'No Upfront'
+scope = 'Region'
 max_hourly_price_difference = 0.010
 
 client = boto3.client('ec2')
 
+reservation_description = client.describe_reserved_instances(
+    ReservedInstancesIds=[
+        reserved_instance_id,
+    ],
+)['ReservedInstances'][0]
+
+#Modificaçao de reserva
+modification_results = client.modify_reserved_instances(
+    ReservedInstancesIds = reserved_instance_id,
+    TargetConfigurations=[
+        {
+            'InstanceCount': used_instances,
+            'InstanceType': reservation_description['InstanceType'],
+            'Platform': reservation_description['ProductDescription'],
+            'Scope': scope
+        },
+        {
+            'InstanceCount': free_instances,
+            'InstanceType': reservation_description['InstanceType'],
+            'Platform': reservation_description['ProductDescription'],
+            'Scope': scope
+        },
+    ]
+)
+
+#Listagem de ofertas
 reserved_instances_offerings = client.describe_reserved_instances_offerings(
     Filters=[
         {
             'Name' : 'scope',
-            'Values': ['Region']
+            'Values': [scope]
         },
     ],
     MinDuration = reservation_duration,
