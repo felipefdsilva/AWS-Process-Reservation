@@ -1,57 +1,18 @@
-#!/usr/bin/env python3
-# Description: Automatically exchanges aws instance reservations
-# Author: Felipe Ferreira da Silva
-# Date: 27/05/2019
-
-import boto3 #for aws api
-import json #for pretty print
-
-reserved_instance_id = '018c6199-5a29-4b7c-8a47-a61455f5d35b'
-reservation_duration = 94608000 #(31536000 | 94608000)
-target_instance_type = 'i3.xlarge'
-platform = 'Linux/UNIX (Amazon VPC)'
-offering_type = 'No Upfront'
-scope = 'Region'
+offering_type = reservation_description['OfferingType']
+reservation_duration = 94608000 #(31536000 ou 94608000) segundos
 max_hourly_price_difference = 0.010
-
-client = boto3.client('ec2')
-
-reservation_description = client.describe_reserved_instances(
-    ReservedInstancesIds=[
-        reserved_instance_id,
-    ],
-)['ReservedInstances'][0]
-
-#Modificaçao de reserva
-modification_results = client.modify_reserved_instances(
-    ReservedInstancesIds = reserved_instance_id,
-    TargetConfigurations=[
-        {
-            'InstanceCount': used_instances,
-            'InstanceType': reservation_description['InstanceType'],
-            'Platform': reservation_description['ProductDescription'],
-            'Scope': scope
-        },
-        {
-            'InstanceCount': free_instances,
-            'InstanceType': reservation_description['InstanceType'],
-            'Platform': reservation_description['ProductDescription'],
-            'Scope': scope
-        },
-    ]
-)
 
 #Listagem de ofertas
 reserved_instances_offerings = client.describe_reserved_instances_offerings(
-    Filters=[
+    Filters = [
         {
             'Name' : 'scope',
-            'Values': [scope]
+            'Values': [reservation_description['Scope']]
         },
     ],
-    MinDuration = reservation_duration,
-    MaxDuration = reservation_duration,
-    InstanceType = target_instance_type,
+    MinDuration = reservation_description['Duration'],
+    MaxDuration = reservation_description['Duration'],
+    InstanceType = 't2.nano',
     OfferingClass = 'convertible',
     ProductDescription = platform,
     InstanceTenancy = 'default',
@@ -66,10 +27,10 @@ if (number_of_offerings > 1):
     print ("Do you want to see the offerings? (y/n)")
     answer = input()
     if (answer == 'y'):
-        print(json.dumps(reserved_instances_offerings, indent = 4, sort_keys = True))
+        print(json.dumps(reserved_instances_offerings, indent = 4, sort_keys = True, default = str))
     else:
         print ("Exiting")
-        exit(1)
+    exit(1)
 
 exchange_quote = client.get_reserved_instances_exchange_quote(
     ReservedInstanceIds = [
@@ -85,6 +46,7 @@ print(json.dumps(exchange_quote, indent = 4, sort_keys = True, default=str))
 
 original_hourly_price = float(exchange_quote['ReservedInstanceValueSet'][0]['ReservationValue']['HourlyPrice'])
 target_hourly_price = float(exchange_quote['TargetConfigurationValueSet'][0]['ReservationValue']['HourlyPrice'])
+
 hourly_price_difference = target_hourly_price - original_hourly_price
 
 if (hourly_price_difference < max_hourly_price_difference):
@@ -94,6 +56,7 @@ else:
     print ("The hourly price difference is greater than $%f"%(max_hourly_price_difference))
     print ("Exiting")
     exit(1)
+"""
 """
 accept_exchange = client.accept_reserved_instances_exchange_quote(
     ReservedInstanceIds=[
@@ -106,4 +69,3 @@ accept_exchange = client.accept_reserved_instances_exchange_quote(
     ]
 )
 print (json.dumps(accept_exchange, indent = 4, sort_keys = True, default=str))
-"""
