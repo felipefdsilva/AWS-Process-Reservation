@@ -98,5 +98,5 @@ def exchange_reservation (client, reservation_description, target_instance_type,
         if (reservation['InstanceCount'] == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
             return (json.dumps(reservation, indent = 4, sort_keys = True, default=str))
 
-    print (json.dumps(new_reservation_description, indent = 4, sort_keys = True, default=str))
+    #print (json.dumps(new_reservation_description, indent = 4, sort_keys = True, default=str))
     return "Could not retrieve new reservation ID"

@@ -25,11 +25,7 @@ client = session.client('ec2')
 reservation_description = client.describe_reserved_instances(
     ReservedInstancesIds = [reservation_id],
 )['ReservedInstances'][0]
-"""
-print ("Reservation Description")
-print (json.dumps(reservation_description, indent = 4, sort_keys = True, default = str))
-print ("---------- End of Description -------------")
-"""
+
 new_instance_count = int(sys.argv[2])
 remaining_instance_count = int(reservation_description['InstanceCount'])-new_instance_count
 
@@ -37,12 +33,9 @@ if (remaining_instance_count < 0):
 	print ("New instance count is greater than current")
 	exit(1)
 
-elif (remaining_instance_count == 0):
-	instance_count_list = [new_instance_count]
-	
-else:
+if (remaining_instance_count > 0):
 	instance_count_list = [new_instance_count, remaining_instance_count]
-
+	
 	modification_response = modify_reservation(client, reservation_description, instance_count_list)
 	print ("New reservations after the modification:")
 	print ((json.dumps(modification_response['ModificationResults'], indent = 4, sort_keys = True, default = str)))
@@ -53,5 +46,6 @@ else:
 			    ReservedInstancesIds = [reservation['ReservedInstancesId']],
 			)['ReservedInstances'][0]
 
-print ("Exchanging reservation %s" %(reservation_description['ReservedInstancesId']))
-print (exchange_reservation(client, reservation_description, target_instance_type, max_hourly_price_difference))
+if (target_instance_type != reservation_description['InstanceType']):
+	print ("Exchanging reservation %s" %(reservation_description['ReservedInstancesId']))
+	print (exchange_reservation(client, reservation_description, target_instance_type, max_hourly_price_difference))
