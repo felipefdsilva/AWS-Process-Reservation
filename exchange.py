@@ -7,7 +7,7 @@ import boto3 #for aws api
 import json #for pretty print
 import time #for sleep
 
-def exchange_reservation (client, reservation_description, target_instance_type, max_hourly_price_difference):
+def exchange_reservation (client, reservation_description, target_instance_type, target_platform, max_hourly_price_difference):
     #Listagem de ofertas
     reserved_instance_offerings = client.describe_reserved_instances_offerings(
         Filters = [
@@ -20,7 +20,7 @@ def exchange_reservation (client, reservation_description, target_instance_type,
         MaxDuration = reservation_description['Duration'],
         InstanceType = target_instance_type,
         OfferingClass = reservation_description['OfferingClass'],
-        ProductDescription = reservation_description['ProductDescription'],
+        ProductDescription = target_platform,
         InstanceTenancy = reservation_description['InstanceTenancy'],
         OfferingType = reservation_description['OfferingType']
     )['ReservedInstancesOfferings']
@@ -83,7 +83,7 @@ def exchange_reservation (client, reservation_description, target_instance_type,
             },
             {
                 'Name': 'product-description',
-                'Values': [reservation_description['ProductDescription']],
+                'Values': [target_platform],
             },
             {
                 'Name': 'state',
