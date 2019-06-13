@@ -7,7 +7,7 @@ import boto3 #for aws api
 import json #for pretty print
 import time #for sleep
 
-def exchange_reservation (client, reservation_description, target_instance_type, target_platform, max_hourly_price_difference):
+def exchange_reservation (client, reservation_description, target_instance_type, expected_intance_count, target_platform, max_hourly_price_difference):
     #Listagem de ofertas
     reserved_instance_offerings = client.describe_reserved_instances_offerings(
         Filters = [
@@ -56,6 +56,12 @@ def exchange_reservation (client, reservation_description, target_instance_type,
                 str(original_hourly_price) + "\n" + \
                 "Exiting\n"
 
+    #Checagem da contagem de instancias
+    if (exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount'] != expected_intance_count):
+        return "The instance count did not match\n" + \
+                "Instance Count by quotation: " + str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
+                "Instance Count Expected: " + str (expected_intance_count)
+
     #Realização da troca
     accept_exchange = client.accept_reserved_instances_exchange_quote(
         ReservedInstanceIds=[reservation_description['ReservedInstancesId']],
@@ -98,5 +104,4 @@ def exchange_reservation (client, reservation_description, target_instance_type,
         if (reservation['InstanceCount'] == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
             return (json.dumps(reservation, indent = 4, sort_keys = True, default=str))
 
-    #print (json.dumps(new_reservation_description, indent = 4, sort_keys = True, default=str))
     return "Could not retrieve new reservation ID"
