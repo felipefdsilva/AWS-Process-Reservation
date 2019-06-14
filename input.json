@@ -1,11 +1,13 @@
 {
-	"ReservationId": "7302f202-566d-4b59-8e99-aca4a3335484",
-	"WastedInstanceCount": 2,
-	"T3NanoExpectedInstanceCount": 9,
+	"AWSProfile" : "painel",
+	"Region" : "us-east-1",
+	"ReservationId": "b12a3677-8d1c-47a1-87c9-240b8de3d8ac",
+	"WastedInstanceCount": 8,
+	"T3NanoExpectedInstanceCount": 8,
 	"MaxHourlyPriceDifference": 0.005,
 	"T3NanoSplitInstanceCountList":[
-		8, 
-		1
+		4, 
+		4
 	],
 	"TargetPlatformList":[
 		"Linux/UNIX",
@@ -16,8 +18,7 @@
 		1
 	],
 	"TargetInstanceTypeList":[
-		"t2.medium",
-		"t2,nano"
-	],
-	"MaxHourlyPriceDifference": 0.005
+		"t2.small",
+		"t2.small"
+	]
 }

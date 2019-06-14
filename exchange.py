@@ -56,19 +56,19 @@ def exchange_reservation (
     hourly_price_difference = target_hourly_price - original_hourly_price
 
     if (hourly_price_difference > max_hourly_price_difference):
-        return "The exchange will not be done\n" + \
+        return ["The exchange will not be done\n" + \
                 "The target reservation hourly price is " + \
                 str(target_hourly_price) + "\n" + \
                 "The original reservation hourly price is " + \
                 str(original_hourly_price) + "\n" + \
-                "Exiting\n"
+                "Exiting\n", {}]
 
     #Checagem da contagem de instancias
     if (exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount'] != expected_intance_count):
-        return "The instance count did not match\n" + \
+        return ["The instance count did not match\n" + \
                 "Instance Count by quotation: " + \
                 str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
-                "Instance Count Expected: " + str (expected_intance_count)
+                "Instance Count Expected: " + str (expected_intance_count), {}]
 
     #Realização da troca
     accept_exchange = client.accept_reserved_instances_exchange_quote(
@@ -110,6 +110,7 @@ def exchange_reservation (
 
     for reservation in new_reservation_description:
         if (reservation['InstanceCount'] == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
-            return (json.dumps(reservation, indent = 4, sort_keys = True, default=str))
+            new_reservation = reservation
+            return ["Exchange successful", reservation]
 
-    return "Could not retrieve new reservation ID"
+    return ["Could not retrieve new reservation ID", {}]

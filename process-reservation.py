@@ -41,7 +41,7 @@ for target_product_description in input['TargetPlatformList']:
 		exit(1)
 
 #Instanciando cliente
-session = boto3.Session(profile_name = 'default')
+session = boto3.Session(profile_name = input['AWSProfile'], region_name  = input['Region'])
 client = session.client('ec2')
 
 #Coletando dados da reserva
@@ -54,12 +54,12 @@ remaining_instance_count = int(reservation_description['InstanceCount']) - input
 #Instance Count validation
 if (remaining_instance_count < 0):
 	print ("Cannot detach %i instances from a reservation with instance count equals to %s"\
-			%(new_instance_count, reservation_description['InstanceCount']))
+			%(input['WastedInstanceCount'], reservation_description['InstanceCount']))
 	exit(1)
 
 #Modification to split used instances and wasted instances
 if (remaining_instance_count > 0):
-	instance_count_list = [new_instance_count, remaining_instance_count]
+	instance_count_list = [input['WastedInstanceCount'], remaining_instance_count]
 	
 	modification_response = modify_reservation(client, reservation_description, instance_count_list)
 	print ("New reservations after the modification:")
@@ -72,23 +72,22 @@ if (remaining_instance_count > 0):
 			)['ReservedInstances'][0]
 
 #Exchange to t3.nano
-if (reservation_description['ProductDescription'] != 't3.nano'):
+if (reservation_description['InstanceType'] != 't3.nano'):
 	print ("Exchanging reservation %s" %(reservation_description['ReservedInstancesId']))
-	t3_nano_reservation_str = exchange_reservation(
-		client, 
+	exchange_response = exchange_reservation(
+		client,
 		reservation_description, 
 		't3.nano',
 		input['T3NanoExpectedInstanceCount'],
 		'Linux/UNIX', 
-		input['MaxHourlyPriceDifference']
+		input['MaxHourlyPriceDifference'],
 	)
-	print (t3_nano_reservation_str)
-	try:
-		t3_nano_reservation = json.loads(t3_nano_reservation_str)
-	except:
+	print (exchange_response[0])
+	if (exchange_response[1] == {}):
 		exit(1)
+	reservation_description = exchange_response[1]
 
-modification_response = modify_reservation (client, t3_nano_reservation, input['T3NanoSplitInstanceCountList'])
+modification_response = modify_reservation (client, reservation_description, input['T3NanoSplitInstanceCountList'])
 print ("New reservations after the modification:")
 print ((json.dumps(modification_response['ModificationResults'], indent = 4, sort_keys = True, default = str)))
 
@@ -107,13 +106,17 @@ for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
 					ReservedInstancesIds = [reservation['ReservedInstancesId']],
 				)['ReservedInstances'][0]
 				
-				print ("New reservation: ")
-				print(exchange_reservation(
-					client, 
-					reservation_description, 
-					input['TargetPlatformList'][index],
-					input['TargetInstanceCountList'][index],
-					input['TargetInstanceTypeList'][index], 
-					input['MaxHourlyPriceDifference']
-				))
+				if (reservation_description['InstanceType'] != input['TargetInstanceTypeList'][index]) or \
+					(reservation_description['ProductDescription'] != input['TargetPlatformList'][index]):
+					final_reservation = exchange_reservation (
+						client,
+						reservation_description,
+						input['TargetInstanceTypeList'][index],
+						input['TargetInstanceCountList'][index], 
+						input['TargetPlatformList'][index],
+						input['MaxHourlyPriceDifference']
+					)
+					print (final_reservation[0])
+					print ("New reservation: ")
+					print (final_reservation[1])
 				break
