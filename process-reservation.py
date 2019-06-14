@@ -80,7 +80,7 @@ if (reservation_description['ProductDescription'] != 't3.nano'):
 		't3.nano',
 		input['T3NanoExpectedInstanceCount'],
 		'Linux/UNIX', 
-		max_hourly_price_difference
+		input['MaxHourlyPriceDifference']
 	)
 	print (t3_nano_reservation_str)
 	try:
@@ -92,21 +92,28 @@ modification_response = modify_reservation (client, t3_nano_reservation, input['
 print ("New reservations after the modification:")
 print ((json.dumps(modification_response['ModificationResults'], indent = 4, sort_keys = True, default = str)))
 
-"""
+#Flagging Reservations as a Exchange candidate
 for reservation in modification_response['ModificationResults']:
-	for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
-		if (reservation['TargetConfiguration']['InstanceCount'] == input['T3NanoSplitInstanceCountList'][index]):
+	reservation['exchange_flag'] = True
+
+#Final Exchange
+for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
+	for reservation in modification_response['ModificationResults']:
+		if (reservation['exchange_flag'] == True):
+			if (reservation['TargetConfiguration']['InstanceCount'] == input['T3NanoSplitInstanceCountList'][index]):
+				reservation['exchange_flag'] = False
 			
-	reservation_description = client.describe_reserved_instances(
-		ReservedInstancesIds = [reservation['ReservedInstancesId']],
-	)['ReservedInstances'][0]
-	
-	t3_nano_reservation_str = exchange_reservation(
-		client, 
-		reservation_description, 
-		input['TargetPlatformList'][count],
-		input['T3NanoSplitInstanceCountList'][count],
-		input['TargetInstanceTypeList'][count], 
-		max_hourly_price_difference
-	)
-"""
+				reservation_description = client.describe_reserved_instances(
+					ReservedInstancesIds = [reservation['ReservedInstancesId']],
+				)['ReservedInstances'][0]
+				
+				print ("New reservation: ")
+				print(exchange_reservation(
+					client, 
+					reservation_description, 
+					input['TargetPlatformList'][index],
+					input['TargetInstanceCountList'][index],
+					input['TargetInstanceTypeList'][index], 
+					input['MaxHourlyPriceDifference']
+				))
+				break

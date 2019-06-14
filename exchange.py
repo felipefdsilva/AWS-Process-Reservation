@@ -7,7 +7,14 @@ import boto3 #for aws api
 import json #for pretty print
 import time #for sleep
 
-def exchange_reservation (client, reservation_description, target_instance_type, expected_intance_count, target_platform, max_hourly_price_difference):
+def exchange_reservation (
+    client, 
+    reservation_description, 
+    target_instance_type, 
+    expected_intance_count, 
+    target_platform, 
+    max_hourly_price_difference
+):
     #Listagem de ofertas
     reserved_instance_offerings = client.describe_reserved_instances_offerings(
         Filters = [
@@ -59,7 +66,8 @@ def exchange_reservation (client, reservation_description, target_instance_type,
     #Checagem da contagem de instancias
     if (exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount'] != expected_intance_count):
         return "The instance count did not match\n" + \
-                "Instance Count by quotation: " + str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
+                "Instance Count by quotation: " + \
+                str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
                 "Instance Count Expected: " + str (expected_intance_count)
 
     #Realização da troca

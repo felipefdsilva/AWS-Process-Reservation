@@ -1,0 +1,23 @@
+{
+	"ReservationId": "7302f202-566d-4b59-8e99-aca4a3335484",
+	"WastedInstanceCount": 2,
+	"T3NanoExpectedInstanceCount": 9,
+	"MaxHourlyPriceDifference": 0.005,
+	"T3NanoSplitInstanceCountList":[
+		8, 
+		1
+	],
+	"TargetPlatformList":[
+		"Linux/UNIX",
+		"Linux/UNIX"
+	],
+	"TargetInstanceCountList":[
+		1,
+		1
+	],
+	"TargetInstanceTypeList":[
+		"t2.medium",
+		"t2,nano"
+	],
+	"MaxHourlyPriceDifference": 0.005
+}
