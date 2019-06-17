@@ -67,8 +67,8 @@ def exchange_reservation (
     if (exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount'] != expected_intance_count):
         return ["The instance count did not match\n" + \
                 "Instance Count by quotation: " + \
-                str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
-                "Instance Count Expected: " + str (expected_intance_count), {}]
+                str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + "\n"\
+                "Instance Count Expected: " + str (expected_intance_count) + "\n", {}]
 
     #Realização da troca
     accept_exchange = client.accept_reserved_instances_exchange_quote(
@@ -110,7 +110,6 @@ def exchange_reservation (
 
     for reservation in new_reservation_description:
         if (reservation['InstanceCount'] == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
-            new_reservation = reservation
             return ["Exchange successful", reservation]
 
     return ["Could not retrieve new reservation ID", {}]

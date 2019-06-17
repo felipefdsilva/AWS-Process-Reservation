@@ -6,6 +6,7 @@
 import boto3 #for aws api
 import json #for pretty print
 import sys #for argv
+import time #for sleep
 from modify import modify_reservation
 from exchange import exchange_reservation
 
@@ -86,6 +87,19 @@ if (reservation_description['InstanceType'] != 't3.nano'):
 	if (exchange_response[1] == {}):
 		exit(1)
 	reservation_description = exchange_response[1]
+
+time_spent = 0
+while (reservation_description['State'] != 'active'):
+	time.sleep(60)
+	time_spent = time_spent + 60
+
+	reservation_description = client.describe_reserved_instances(
+	    ReservedInstancesIds = [reservation['ReservedInstancesId']],
+	)['ReservedInstances'][0]
+
+	if (time_spent > 600):
+		print ("New reservation took too long to became active after t3.nano exchange")
+		exit(1)
 
 #Spliting t3.nano reservation for final exchanges
 if (len(input['T3NanoSplitInstanceCountList']) > 1):
