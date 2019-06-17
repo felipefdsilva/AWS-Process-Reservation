@@ -87,9 +87,11 @@ if (reservation_description['InstanceType'] != 't3.nano'):
 		exit(1)
 	reservation_description = exchange_response[1]
 
-modification_response = modify_reservation (client, reservation_description, input['T3NanoSplitInstanceCountList'])
-print ("New reservations after the modification:")
-print ((json.dumps(modification_response['ModificationResults'], indent = 4, sort_keys = True, default = str)))
+#Spliting t3.nano reservation for final exchanges
+if (len(input['T3NanoSplitInstanceCountList']) > 1):
+	modification_response = modify_reservation (client, reservation_description, input['T3NanoSplitInstanceCountList'])
+	print ("New reservations after the modification:")
+	print (json.dumps(modification_response['ModificationResults'], indent = 4, sort_keys = True, default = str))
 
 #Flagging Reservations as a Exchange candidate
 for reservation in modification_response['ModificationResults']:
@@ -101,7 +103,7 @@ for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
 		if (reservation['exchange_flag'] == True):
 			if (reservation['TargetConfiguration']['InstanceCount'] == input['T3NanoSplitInstanceCountList'][index]):
 				reservation['exchange_flag'] = False
-			
+	
 				reservation_description = client.describe_reserved_instances(
 					ReservedInstancesIds = [reservation['ReservedInstancesId']],
 				)['ReservedInstances'][0]
@@ -118,5 +120,5 @@ for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
 					)
 					print (final_reservation[0])
 					print ("New reservation: ")
-					print (final_reservation[1])
+					print (json.dumps(final_reservation[1], indent = 4, sort_keys = True, default = str))
 				break
