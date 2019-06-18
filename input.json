@@ -1,24 +1,28 @@
 {
 	"AWSProfile" : "painel",
 	"Region" : "us-east-1",
-	"ReservationId": "b12a3677-8d1c-47a1-87c9-240b8de3d8ac",
-	"WastedInstanceCount": 8,
-	"T3NanoExpectedInstanceCount": 8,
+	"ReservationId": "",
+	"WastedInstanceCount": 2,
+	"T3NanoExpectedInstanceCount": 9,
 	"MaxHourlyPriceDifference": 0.005,
 	"T3NanoSplitInstanceCountList":[
 		4, 
-		4
+		4,
+		1
 	],
 	"TargetPlatformList":[
-		"Linux/UNIX",
-		"Linux/UNIX"
+		"Linux/UNIX (Amazon VPC)",
+		"Linux/UNIX (Amazon VPC)",
+		"Linux/UNIX (Amazon VPC)"
 	],
 	"TargetInstanceCountList":[
+		1,
 		1,
 		1
 	],
 	"TargetInstanceTypeList":[
 		"t2.small",
-		"t2.small"
+		"t2.small",
+		"t3.nano"
 	]
 }

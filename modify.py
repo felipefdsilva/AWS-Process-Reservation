@@ -3,9 +3,6 @@
 # Author: Felipe Ferreira da Silva
 # Date: 27/05/2019
 
-import boto3 #for aws api
-import time #for sleep
-
 def modify_reservation(client, reservation_description, instance_count_list):
     target_config_list = []
 
@@ -26,13 +23,8 @@ def modify_reservation(client, reservation_description, instance_count_list):
 
     modification_status = 'not fulfilled'
 
-    #Loop que aguarda a modificação ser finalizada
-    while ((modification_status != 'fulfilled')):
-        modification_results = client.describe_reserved_instances_modifications(
-            ReservedInstancesModificationIds = [modification_id]
-        )['ReservedInstancesModifications'][0]
-
-        modification_status = modification_results['Status']
-        time.sleep(60)
+    modification_results = client.describe_reserved_instances_modifications(
+        ReservedInstancesModificationIds = [modification_id]
+    )['ReservedInstancesModifications'][0]
 
     return modification_results

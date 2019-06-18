@@ -3,7 +3,6 @@
 # Author: Felipe Ferreira da Silva
 # Date: 27/05/2019
 
-import boto3 #for aws api
 import json #for pretty print
 import time #for sleep
 

@@ -9,6 +9,7 @@ import sys #for argv
 import time #for sleep
 from modify import modify_reservation
 from exchange import exchange_reservation
+from waiter import reservation_waiter
 
 if (len(sys.argv) != 2):
     print ("Usage: python %s <input-json-file>" %(sys.argv[0]))
@@ -50,9 +51,11 @@ reservation_description = client.describe_reserved_instances(
     ReservedInstancesIds = [input['ReservationId']],
 )['ReservedInstances'][0]
 
+reservation_waiter(client, reservation_description)
+
+#Validação da contagem de instâncias
 remaining_instance_count = int(reservation_description['InstanceCount']) - input['WastedInstanceCount']
 
-#Instance Count validation
 if (remaining_instance_count < 0):
 	print ("Cannot detach %i instances from a reservation with instance count equals to %s"\
 			%(input['WastedInstanceCount'], reservation_description['InstanceCount']))
@@ -71,6 +74,7 @@ if (remaining_instance_count > 0):
 			reservation_description = client.describe_reserved_instances(
 			    ReservedInstancesIds = [reservation['ReservedInstancesId']],
 			)['ReservedInstances'][0]
+			reservation_waiter(reservation_description)
 
 #Exchange to t3.nano
 if (reservation_description['InstanceType'] != 't3.nano'):
@@ -80,7 +84,7 @@ if (reservation_description['InstanceType'] != 't3.nano'):
 		reservation_description, 
 		't3.nano',
 		input['T3NanoExpectedInstanceCount'],
-		'Linux/UNIX', 
+		'Linux/UNIX (Amazon VPC)', 
 		input['MaxHourlyPriceDifference'],
 	)
 	print (exchange_response[0])
@@ -88,18 +92,8 @@ if (reservation_description['InstanceType'] != 't3.nano'):
 		exit(1)
 	reservation_description = exchange_response[1]
 
-time_spent = 0
-while (reservation_description['State'] != 'active'):
-	time.sleep(60)
-	time_spent = time_spent + 60
-
-	reservation_description = client.describe_reserved_instances(
-	    ReservedInstancesIds = [reservation['ReservedInstancesId']],
-	)['ReservedInstances'][0]
-
-	if (time_spent > 600):
-		print ("New reservation took too long to became active after t3.nano exchange")
-		exit(1)
+#waiting t3.nano reservation to became active
+reservation_waiter(reservation_description)
 
 #Spliting t3.nano reservation for final exchanges
 if (len(input['T3NanoSplitInstanceCountList']) > 1):
@@ -121,6 +115,7 @@ for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
 				reservation_description = client.describe_reserved_instances(
 					ReservedInstancesIds = [reservation['ReservedInstancesId']],
 				)['ReservedInstances'][0]
+				reservation_waiter(reservation_description)
 				
 				if (reservation_description['InstanceType'] != input['TargetInstanceTypeList'][index]) or \
 					(reservation_description['ProductDescription'] != input['TargetPlatformList'][index]):
@@ -133,6 +128,7 @@ for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
 						input['MaxHourlyPriceDifference']
 					)
 					print (final_reservation[0])
-					print ("New reservation: ")
-					print (json.dumps(final_reservation[1], indent = 4, sort_keys = True, default = str))
+					if (final_reservation[1] != {}):
+						print ("New reservation: ")
+						print (json.dumps(final_reservation[1], indent = 4, sort_keys = True, default = str))
 				break
