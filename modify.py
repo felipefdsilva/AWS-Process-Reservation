@@ -3,6 +3,8 @@
 # Author: Felipe Ferreira da Silva
 # Date: 27/05/2019
 
+import time
+
 def modify_reservation(client, reservation_description, instance_count_list):
     target_config_list = []
 
@@ -21,10 +23,15 @@ def modify_reservation(client, reservation_description, instance_count_list):
         TargetConfigurations = target_config_list
     )['ReservedInstancesModificationId']
 
-    modification_status = 'not fulfilled'
+    time_spent = 0
+    while (time_spent < 60):
+        modification_results = client.describe_reserved_instances_modifications(
+            ReservedInstancesModificationIds = [modification_id]
+        )['ReservedInstancesModifications'][0]
 
-    modification_results = client.describe_reserved_instances_modifications(
-        ReservedInstancesModificationIds = [modification_id]
-    )['ReservedInstancesModifications'][0]
+        if (modification_results['ModificationResults'][0]['ReservedInstancesId']):
+            break
+        time.sleep(10)
+        time_spent +=10
 
     return modification_results

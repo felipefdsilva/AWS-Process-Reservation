@@ -1,10 +1,9 @@
 {
 	"AWSProfile" : "painel",
 	"Region" : "us-east-1",
-	"ReservationId": "",
+	"ReservationId": "38a050cb-333a-4d1b-8dbf-1c8ef0d62429",
 	"WastedInstanceCount": 2,
 	"T3NanoExpectedInstanceCount": 9,
-	"MaxHourlyPriceDifference": 0.005,
 	"T3NanoSplitInstanceCountList":[
 		4, 
 		4,
@@ -24,5 +23,6 @@
 		"t2.small",
 		"t2.small",
 		"t3.nano"
-	]
+	],
+	"MaxHourlyPriceDifference": 0.005
 }

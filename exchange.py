@@ -6,6 +6,9 @@
 import json #for pretty print
 import time #for sleep
 
+class ExchangeException (Exception):
+    pass
+
 def exchange_reservation (
     client, 
     reservation_description, 
@@ -34,11 +37,11 @@ def exchange_reservation (
     number_of_offerings = len(reserved_instance_offerings)
 
     if (number_of_offerings > 1):
-        return "The search returned " + \
+        raise ExchangeException("The search returned " + \
                 str(number_of_offerings) + \
                 "instance offering(s)\n" + \
                 "The exchange can't be done automatically\n" + \
-                "Exiting\n"
+                "Exiting\n")
 
     #Orçamento da mudança
     exchange_quote = client.get_reserved_instances_exchange_quote(
@@ -50,27 +53,32 @@ def exchange_reservation (
         ]
     )
     #Checagem de diferença de preço
-    original_hourly_price = float(exchange_quote['ReservedInstanceValueSet'][0]['ReservationValue']['HourlyPrice'])
-    target_hourly_price = float(exchange_quote['TargetConfigurationValueSet'][0]['ReservationValue']['HourlyPrice'])
+    original_hourly_price = float(
+        exchange_quote['ReservedInstanceValueSet'][0]['ReservationValue']['HourlyPrice']
+    )
+    target_hourly_price = float(
+        exchange_quote['TargetConfigurationValueSet'][0]['ReservationValue']['HourlyPrice']
+    )
     hourly_price_difference = target_hourly_price - original_hourly_price
 
     if (hourly_price_difference > max_hourly_price_difference):
-        return ["The exchange will not be done\n" + \
+        raise ExchangeException("The exchange will not be done\n" + \
                 "The target reservation hourly price is " + \
                 str(target_hourly_price) + "\n" + \
                 "The original reservation hourly price is " + \
                 str(original_hourly_price) + "\n" + \
-                "Exiting\n", {}]
+                "Exiting\n")
 
     #Checagem da contagem de instancias
-    if (exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount'] != expected_intance_count):
-        return ["The instance count did not match\n" + \
+    if (exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount'] 
+        != expected_intance_count):
+        raise ExchangeException("The instance count did not match\n" + \
                 "Instance Count by quotation: " + \
-                str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + "\n"\
-                "Instance Count Expected: " + str (expected_intance_count) + "\n", {}]
+                str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
+                "\n" + "Instance Count Expected: " + str (expected_intance_count) + "\n")
 
     #Realização da troca
-    accept_exchange = client.accept_reserved_instances_exchange_quote(
+    client.accept_reserved_instances_exchange_quote(
         ReservedInstanceIds=[reservation_description['ReservedInstancesId']],
         TargetConfigurations=[
             {
@@ -78,37 +86,28 @@ def exchange_reservation (
             },
         ]
     )
-    time.sleep(60)
     #Recuperando o ID da nova reserva
-    new_reservation_description = client.describe_reserved_instances(
-        Filters=[
-            {
-                'Name': 'scope',
-                'Values': [reservation_description['Scope']],
-            },
-            {
-                'Name': 'duration',
-                'Values': [str(reservation_description['Duration'])],
-            },
-            {
-                'Name': 'instance-type',
-                'Values': [target_instance_type],
-            },
-            {
-                'Name': 'product-description',
-                'Values': [target_platform],
-            },
-            {
-                'Name': 'state',
-                'Values': ['payment-pending']
-            },
-        ],
-        OfferingClass = reservation_description['OfferingClass'],
-        OfferingType = reservation_description['OfferingType']
-    )['ReservedInstances']
+    time_spent = 0
+    
+    while (time_spent < 120):
+        new_reservation_description = client.describe_reserved_instances(
+            Filters=[
+                {
+                    'Name': 'state',
+                    'Values': ['payment-pending']
+                },
+            ],
+        )['ReservedInstances']
+
+        if (len(new_reservation_description) > 0):
+            break
+
+        time.sleep(10)
+        time_spent += 10
 
     for reservation in new_reservation_description:
-        if (reservation['InstanceCount'] == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
-            return ["Exchange successful", reservation]
-
-    return ["Could not retrieve new reservation ID", {}]
+        if (reservation['InstanceCount'] 
+            == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
+            return reservation
+    
+    raise ExchangeException("Could not retrieve new reservation ID")

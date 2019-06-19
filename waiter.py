@@ -4,6 +4,7 @@
 # Date: 27/05/2019
 
 import boto3 #for aws api
+import time #for sleep
 
 def reservation_waiter (client, reservation_description):
     time_spent = 0
@@ -13,9 +14,9 @@ def reservation_waiter (client, reservation_description):
         time_spent = time_spent + 60
 
         reservation_description = client.describe_reserved_instances(
-            ReservedInstancesIds = [reservation_id],
+            ReservedInstancesIds = [reservation_description["ReservedInstancesId"]]
         )['ReservedInstances'][0]
 
         if (time_spent > 600):
-            print ('Reservation took too long to became active')
+            print ('Reservation took too long to become active')
             exit(1)
