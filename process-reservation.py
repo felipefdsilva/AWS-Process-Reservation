@@ -7,7 +7,7 @@ import boto3 #for aws api
 import json #for pretty print
 import sys #for argv
 import time #for sleep
-from waiter import reservation_waiter
+from waiter import reservation_waiter, WaiterException
 from modify import modify_reservation
 from exchange import exchange_reservation, ExchangeException
 
@@ -45,17 +45,18 @@ reservation_description = client.describe_reserved_instances(
     ReservedInstancesIds=[input['ReservationId']],
 )['ReservedInstances'][0]
 
-if (reservation_description['State'] is 'retired'):
-    print("Reservation is retired")
-    exit(1)
-        
-reservation_waiter(client, reservation_description)
+try:        
+	reservation_waiter(client, reservation_description)
+
+except WaiterException as error:
+	print (error)
+	exit(1)
 
 #Validacao da contagem de instancias
-remaining_instance_count = int(reservation_description['InstanceCount']) - input['WastedInstanceCount']
+remaining_instance_count = reservation_description['InstanceCount'] - input['WastedInstanceCount']
 
 if (remaining_instance_count < 0):
-	print ("Cannot detach {wasted} instances from a reservation with instance count equals to {instance_count}".
+	print ("Cannot detach {wasted} instances from a reservation with {instance_count} instances".
 			format(wasted=input['WastedInstanceCount'], instance_count=reservation_description['InstanceCount']))
 	exit(1)
 
@@ -65,7 +66,7 @@ if (remaining_instance_count > 0):
 	
 	modification_response = modify_reservation(client, reservation_description, instance_count_list)
 
-	print ("New reservations after modification:")
+	print ("New reservations after waste detachment:")
 	print ((json.dumps(modification_response['ModificationResults'], indent=4, sort_keys=True, default=str)))
 
 	for reservation in modification_response['ModificationResults']:
@@ -74,7 +75,12 @@ if (remaining_instance_count > 0):
 			    ReservedInstancesIds=[reservation['ReservedInstancesId']],
 			)['ReservedInstances'][0]
 
-			reservation_waiter(client, reservation_description)
+			try:
+				reservation_waiter(client, reservation_description)
+
+			except WaiterException as error:
+				print (error)
+				exit(1)
 
 #Exchange to t3.nano
 if (reservation_description['InstanceType'] != 't3.nano'):
@@ -95,7 +101,13 @@ if (reservation_description['InstanceType'] != 't3.nano'):
 
 	print ("Exchange Results:")
 	print (json.dumps(reservation_description, indent=4, sort_keys=True, default=str))
-	reservation_waiter(client, reservation_description)
+
+	try:
+		reservation_waiter(client, reservation_description)
+
+	except WaiterException as error:
+		print (error)
+		exit(1)
 
 #Spliting t3.nano reservation for final exchanges
 if (len(input['T3NanoSplitInstanceCountList']) > 1):
@@ -104,7 +116,7 @@ if (len(input['T3NanoSplitInstanceCountList']) > 1):
 		reservation_description, 
 		input['T3NanoSplitInstanceCountList']
 	)
-	print ("New reservations after the modification:")
+	print ("New reservations after t3.nano reservation split:")
 	print (json.dumps(modification_response['ModificationResults'], indent=4, sort_keys=True, default=str))
 
 #Flagging Reservations as a Exchange candidate
@@ -122,10 +134,17 @@ for index in range (len(input['T3NanoSplitInstanceCountList'])):
 					ReservedInstancesIds=[reservation['ReservedInstancesId']],
 				)['ReservedInstances'][0]
 
-				reservation_waiter(client, reservation_description)
+				try:
+					reservation_waiter(client, reservation_description)
+
+				except WaiterException as error:
+					print (error)
+					exit(1)
 				
-				if (reservation_description['InstanceType'] != input['TargetInstanceTypeList'][index]) or \
-					(reservation_description['ProductDescription'] != input['TargetPlatformList'][index]):
+				if (reservation_description['InstanceType'] != input['TargetInstanceTypeList'][index]):
+
+					print ("Exchanging reservation {}".format(reservation['ReservedInstancesId']))
+
 					try:	
 						final_reservation = exchange_reservation (
 							client,

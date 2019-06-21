@@ -23,8 +23,7 @@ def modify_reservation(client, reservation_description, instance_count_list):
     while (payment_pending):
         payment_pending = verify_payment_pending(client)
 
-        if (payment_pending): 
-            time.sleep(10)
+        time.sleep(10)
 
     #Modificaçao de reserva
     modification_id = client.modify_reserved_instances(
@@ -35,8 +34,7 @@ def modify_reservation(client, reservation_description, instance_count_list):
     while (not payment_pending):
         payment_pending = verify_payment_pending(client)
 
-        if (not payment_pending):
-            time.sleep(10)
+        time.sleep(10)
 
     modification_results = client.describe_reserved_instances_modifications(
         ReservedInstancesModificationIds = [modification_id]
