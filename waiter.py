@@ -8,6 +8,7 @@ import time #for sleep
 
 def reservation_waiter (client, reservation_description):
     time_spent = 0
+
     #Waiting reservation to became active
     while (reservation_description['State'] != 'active'):
         time.sleep(60)

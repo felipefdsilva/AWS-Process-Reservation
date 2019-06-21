@@ -19,26 +19,16 @@ file = open(sys.argv[1], "r")
 input = json.load(file)
 file.close()
 
-product_description_list = ['Linux/UNIX',
-							'Linux/UNIX (Amazon VPC)',
-							'SUSE Linux',
-							'SUSE Linux (Amazon VPC)',
-							'Red Hat Enterprise Linux',
-							'Red Hat Enterprise Linux (Amazon VPC)',
-							'Windows, Windows (Amazon VPC)',
-							'Windows with SQL Server Standard',
-							'Windows with SQL Server Standard (Amazon VPC)',
-							'Windows with SQL Server Web',
-							'Windows with SQL Server Web (Amazon VPC)',
-							'Windows with SQL Server Enterprise',
-							'Windows with SQL Server Enterprise (Amazon VPC)']
+product_description_list = open('product_description_list.txt').read().splitlines()
 
 #Validation of product_description input parameter
 for target_product_description in input['TargetPlatformList']:
 	valid_description = False
+
 	for product_description in product_description_list:
 		if (target_product_description == product_description):
 			valid_description = True
+
 	if (valid_description == False):
 		print ("Not a valid product description - {}".format(target_product_description))
 		exit(1)
@@ -52,12 +42,16 @@ client = session.client('ec2')
 
 #Coletando dados da reserva
 reservation_description = client.describe_reserved_instances(
-    ReservedInstancesIds = [input['ReservationId']],
+    ReservedInstancesIds=[input['ReservationId']],
 )['ReservedInstances'][0]
 
+if (reservation_description['State'] is 'retired'):
+    print("Reservation is retired")
+    exit(1)
+        
 reservation_waiter(client, reservation_description)
 
-#Validação da contagem de instâncias
+#Validacao da contagem de instancias
 remaining_instance_count = int(reservation_description['InstanceCount']) - input['WastedInstanceCount']
 
 if (remaining_instance_count < 0):
@@ -70,7 +64,8 @@ if (remaining_instance_count > 0):
 	instance_count_list = [input['WastedInstanceCount'], remaining_instance_count]
 	
 	modification_response = modify_reservation(client, reservation_description, instance_count_list)
-	print ("New reservations after the modification:")
+
+	print ("New reservations after modification:")
 	print ((json.dumps(modification_response['ModificationResults'], indent=4, sort_keys=True, default=str)))
 
 	for reservation in modification_response['ModificationResults']:
@@ -79,12 +74,12 @@ if (remaining_instance_count > 0):
 			    ReservedInstancesIds=[reservation['ReservedInstancesId']],
 			)['ReservedInstances'][0]
 
-			reservation_waiter(reservation_description)
+			reservation_waiter(client, reservation_description)
 
 #Exchange to t3.nano
-"""
 if (reservation_description['InstanceType'] != 't3.nano'):
 	print ("Exchanging reservation {id}".format(id=reservation_description['ReservedInstancesId']))
+
 	try:	
 		reservation_description = exchange_reservation(
 			client,
@@ -94,11 +89,13 @@ if (reservation_description['InstanceType'] != 't3.nano'):
 			'Linux/UNIX (Amazon VPC)', 
 			input['MaxHourlyPriceDifference'],
 		)
-		reservation_waiter(reservation_description)
-
 	except ExchangeException as error:
 		print (error)
 		exit(1)
+
+	print ("Exchange Results:")
+	print (json.dumps(reservation_description, indent=4, sort_keys=True, default=str))
+	reservation_waiter(client, reservation_description)
 
 #Spliting t3.nano reservation for final exchanges
 if (len(input['T3NanoSplitInstanceCountList']) > 1):
@@ -115,7 +112,7 @@ for reservation in modification_response['ModificationResults']:
 	reservation['exchange_flag'] = True
 
 #Final Exchange
-for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
+for index in range (len(input['T3NanoSplitInstanceCountList'])):
 	for reservation in modification_response['ModificationResults']:
 		if (reservation['exchange_flag'] == True):
 			if (reservation['TargetConfiguration']['InstanceCount'] == input['T3NanoSplitInstanceCountList'][index]):
@@ -125,7 +122,7 @@ for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
 					ReservedInstancesIds=[reservation['ReservedInstancesId']],
 				)['ReservedInstances'][0]
 
-				reservation_waiter(reservation_description)
+				reservation_waiter(client, reservation_description)
 				
 				if (reservation_description['InstanceType'] != input['TargetInstanceTypeList'][index]) or \
 					(reservation_description['ProductDescription'] != input['TargetPlatformList'][index]):
@@ -138,9 +135,9 @@ for index in range (0, len(input['T3NanoSplitInstanceCountList'])):
 							input['TargetPlatformList'][index],
 							input['MaxHourlyPriceDifference']
 						)
-						print (json.dumps(final_reservation[1], indent=4, sort_keys=True, default=str))
-
 					except ExchangeException as error:
 						print(error)
+
+					print (json.dumps(final_reservation, indent=4, sort_keys=True, default=str))
+
 				break
-				"""

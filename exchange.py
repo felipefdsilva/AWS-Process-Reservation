@@ -5,6 +5,7 @@
 
 import json #for pretty print
 import time #for sleep
+from verify_payment import verify_payment_pending
 
 class ExchangeException (Exception):
     pass
@@ -52,7 +53,7 @@ def exchange_reservation (
             },
         ]
     )
-    #Checagem de diferença de preço
+    #Checagem de diferenca de preço
     original_hourly_price = float(
         exchange_quote['ReservedInstanceValueSet'][0]['ReservationValue']['HourlyPrice']
     )
@@ -77,7 +78,15 @@ def exchange_reservation (
                 str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
                 "\n" + "Instance Count Expected: " + str (expected_intance_count) + "\n")
 
-    #Realização da troca
+    payment_pending = True
+
+    while (payment_pending):
+        payment_pending = verify_payment_pending(client)
+
+        if (payment_pending):
+            time.sleep(10)
+    
+    #Realizacao da troca
     client.accept_reserved_instances_exchange_quote(
         ReservedInstanceIds=[reservation_description['ReservedInstancesId']],
         TargetConfigurations=[
@@ -89,24 +98,23 @@ def exchange_reservation (
     #Recuperando o ID da nova reserva
     time_spent = 0
     
-    while (time_spent < 120):
-        new_reservation_description = client.describe_reserved_instances(
-            Filters=[
-                {
-                    'Name': 'state',
-                    'Values': ['payment-pending']
-                },
-            ],
-        )['ReservedInstances']
+    while (not payment_pending):
+        payment_pending = verify_payment_pending(client)
 
-        if (len(new_reservation_description) > 0):
-            break
+        if(not payment_pending):
+            time.sleep(10)
 
-        time.sleep(10)
-        time_spent += 10
+    new_reservation_description = client.describe_reserved_instances(
+        Filters=[
+            {
+                'Name': 'state',
+                'Values': ['payment-pending']
+            },
+        ],
+    )['ReservedInstances']
 
     for reservation in new_reservation_description:
-        if (reservation['InstanceCount'] 
+        if (reservation['InstanceCount']
             == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
             return reservation
     
