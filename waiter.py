@@ -18,14 +18,13 @@ def reservation_waiter (client, reservation_description):
             format(reservation_description['ReservedInstancesId'])
         )
 
-    #Waiting reservation to became active
+    #Waiting reservation to become active
     while (reservation_description['State'] == 'payment-pending'):
         time.sleep(60)
         time_spent = time_spent + 60
 
-        if (time_spent > 600):
-            print ('Reservation took too long to become active')
-            exit(1)
+        if (time_spent > 1200):
+            raise WaiterException('Reservation took too long to become active')
 
         reservation_description = client.describe_reserved_instances(
             ReservedInstancesIds = [reservation_description["ReservedInstancesId"]]

@@ -101,7 +101,7 @@ def exchange_reservation (
     while (not payment_pending):
         payment_pending = verify_payment_pending(client)
 
-        if(not payment_pending):
+        if (not payment_pending):
             time.sleep(10)
 
     new_reservation_description = client.describe_reserved_instances(
