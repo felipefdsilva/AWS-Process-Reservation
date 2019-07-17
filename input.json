@@ -1,7 +1,7 @@
 {
 	"AWSProfile" : "painel",
 	"Region" : "us-east-1",
-	"ReservationId": "24454440-e8cd-4a46-81a4-ef13c7ff688a",
+	"ReservationId": "fefe9e63-8670-4b56-af3b-0185ec349d99",
 	"WastedInstanceCount": 1,
 	"T3NanoExpectedInstanceCount": 5,
 	"T3NanoSplitInstanceCountList":[
