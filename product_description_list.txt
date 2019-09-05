@@ -1,10 +1,14 @@
 Linux/UNIX
 Linux/UNIX (Amazon VPC)
+Linux with SQL Server Web (Amazon VPC)
+Linux with SQL Server Standard (Amazon VPC)
+Linux with SQL Server Enterprise (Amazon VPC)
 SUSE Linux
 SUSE Linux (Amazon VPC)
 Red Hat Enterprise Linux
 Red Hat Enterprise Linux (Amazon VPC)
-Windows Windows (Amazon VPC)
+Windows
+Windows (Amazon VPC)
 Windows with SQL Server Standard
 Windows with SQL Server Standard (Amazon VPC)
 Windows with SQL Server Web

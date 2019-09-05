@@ -4,40 +4,58 @@
 # Date: 27/05/2019
 
 import time
-from verify_payment import verify_payment_pending
+from sts import get_client
+from waiter import wait_payment_pending
 
-def modify_reservation(client, reservation_description, instance_count_list):
+#Modifies RI, spliting the instance count into new RIs 
+def modify_reservation(reservation, instance_count_list):
+
+    ec2 = get_client('ec2')
+
+    platform = 'EC2-VPC'
     target_config_list = []
 
     for instance_count in instance_count_list:
         reservation_params = {
             'InstanceCount': instance_count,
-            'InstanceType': reservation_description['InstanceType'],
-            'Platform': 'EC2-VPC',
-            'Scope': reservation_description['Scope']
+            'InstanceType': reservation['InstanceType'],
+            'Platform': platform,
+            'Scope': reservation['Scope']
         }
         target_config_list.append(reservation_params)
 
-    payment_pending = True
+    wait_payment_pending (False)
 
-    while (payment_pending):
-        payment_pending = verify_payment_pending(client)
-
-        time.sleep(10)
-
-    #Modificaçao de reserva
-    modification_id = client.modify_reserved_instances(
-        ReservedInstancesIds = [reservation_description['ReservedInstancesId']],
+    modification_id = ec2.modify_reserved_instances(
+        ReservedInstancesIds = [reservation['ReservedInstancesId']],
         TargetConfigurations = target_config_list
     )['ReservedInstancesModificationId']
 
-    while (not payment_pending):
-        payment_pending = verify_payment_pending(client)
+    wait_payment_pending(True)
 
-        time.sleep(10)
-
-    modification_results = client.describe_reserved_instances_modifications(
+    modification_results = ec2.describe_reserved_instances_modifications(
         ReservedInstancesModificationIds = [modification_id]
     )['ReservedInstancesModifications'][0]
 
-    return modification_results
+    #Listing new reservation IDs
+    id_list = []
+    for reservation in modification_results['ModificationResults']:
+        id_list.append(reservation['ReservedInstancesId'])
+
+    #Updating description list
+    reservation_list = ec2.describe_reserved_instances(
+        ReservedInstancesIds=id_list
+    )['ReservedInstances']
+
+    #reordering reservations
+    for index in range(len(reservation_list)):
+        for description_index in range (index, len(reservation_list)):
+
+            if (instance_count_list[index] == reservation_list[description_index]['InstanceCount']):
+
+                if (index != description_index):
+                    reservation_aux = reservation_list[index]
+                    reservation_list[index] = reservation_list[description_index]
+                    reservation_list[description_index] = reservation_aux
+
+    return reservation_list

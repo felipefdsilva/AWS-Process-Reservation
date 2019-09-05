@@ -5,7 +5,6 @@ Este artigo tem o intuito de orientar o uso do programa que realiza a troca de r
 
 *   [Introdução](#MudançadeReservasporCódigo-GuiadoUsuário-Introdução)
 *   [Instruções](#MudançadeReservasporCódigo-GuiadoUsuário-Instruções)
-*   [Related articles](#MudançadeReservasporCódigo-GuiadoUsuário-Relatedarticles)
 
 Introdução
 ----------
@@ -37,29 +36,43 @@ Instruções
         **Exemplo: input.json**
         ```json
         {
-        	"AWSProfile" : "painel",
-        	"Region" : "us-east-1",
-        	"ReservationId": "b12a3677-8d1c-47a1-87c9-240b8de3d8ac",
-        	"WastedInstanceCount": 8,
-        	"T3NanoExpectedInstanceCount": 8,
-        	"MaxHourlyPriceDifference": 0.005,
-        	"T3NanoSplitInstanceCountList":[
-        		4, 
-        		4
-        	],
-        	"TargetPlatformList":[
-        		"Linux/UNIX",
-        		"Linux/UNIX"
-        	],
-        	"TargetInstanceCountList":[
-        		1,
-        		1
-        	],
-        	"TargetInstanceTypeList":[
-        		"t2.small",
-        		"t2.small"
-        	]
-        }
+			"AccountNumber": "518512136469",
+			"Region": "us-east-1",
+			"RoleName": "reservation-role",
+			"ReservationId": "0009b6cf-9ef0-400c-bb00-619b2311551c",
+			"WastedInstanceCount": 43,
+			"TradeRIParams": {
+				"PlatformList": [
+				"Linux/UNIX (Amazon VPC)"
+				],
+				"InstanceCountList": [
+				50
+				],
+				"InstanceTypeList": [
+				"t3.nano"
+				],
+				"MaxPriceDifference": 0.005,
+				"SplitInstanceCountList": [
+				21,
+				29
+				]
+			},
+			"TargetRIsParams": {
+				"PlatformList": [
+				"SUSE Linux (Amazon VPC)",
+				"Linux/UNIX (Amazon VPC)"
+				],
+				"InstanceCountList": [
+				1,
+				2
+				],
+				"InstanceTypeList": [
+				"t2.medium",
+				"c5.large"
+				],
+				"MaxPriceDifference": 0.005
+			}
+		}
         ```
 2.  Salve as alterações no arquivo input.json
 3.  Abra um terminal, e digite o seguinte comando:

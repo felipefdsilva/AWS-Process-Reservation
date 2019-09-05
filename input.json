@@ -1,24 +1,38 @@
 {
-	"AWSProfile" : "painel",
-	"Region" : "us-east-1",
-	"ReservationId": "fefe9e63-8670-4b56-af3b-0185ec349d99",
-	"WastedInstanceCount": 1,
-	"T3NanoExpectedInstanceCount": 5,
-	"T3NanoSplitInstanceCountList":[
-		4,
-		1
-	],
-	"TargetPlatformList":[
-		"Linux/UNIX (Amazon VPC)",
-		"Linux/UNIX (Amazon VPC)"
-	],
-	"TargetInstanceCountList":[
-		1,
-		1
-	],
-	"TargetInstanceTypeList":[
-		"t2.small",
-		"t3.nano"
-	],
-	"MaxHourlyPriceDifference": 0.005
+  "AccountNumber": "518512136469",
+  "Region": "us-east-1",
+  "RoleName": "reservation-role",
+  "ReservationId": "0009b6cf-9ef0-400c-bb00-619b2311551c",
+  "WastedInstanceCount": 43,
+  "TradeRIParams": {
+    "PlatformList": [
+      "Linux/UNIX (Amazon VPC)"
+    ],
+    "InstanceCountList": [
+      50
+    ],
+    "InstanceTypeList": [
+      "t3.nano"
+    ],
+    "MaxPriceDifference": 0.005,
+    "SplitInstanceCountList": [
+      21,
+      29
+    ]
+  },
+  "TargetRIsParams": {
+    "PlatformList": [
+      "SUSE Linux (Amazon VPC)",
+      "Linux/UNIX (Amazon VPC)"
+    ],
+    "InstanceCountList": [
+      1,
+      2
+    ],
+    "InstanceTypeList": [
+      "t2.medium",
+      "c5.large"
+    ],
+    "MaxPriceDifference": 0.005
+  }
 }

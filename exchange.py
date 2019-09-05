@@ -3,119 +3,93 @@
 # Author: Felipe Ferreira da Silva
 # Date: 27/05/2019
 
-import json #for pretty print
 import time #for sleep
-from verify_payment import verify_payment_pending
+from sts import get_client
+from offering import get_exchange_offering, OfferingException
+from quotation import check_exchange_quote, QuotationException
+from waiter import reservation_waiter, wait_payment_pending, WaiterException
 
 class ExchangeException (Exception):
     pass
 
-def exchange_reservation (
-    client, 
-    reservation_description, 
-    target_instance_type, 
-    expected_intance_count, 
-    target_platform, 
-    max_hourly_price_difference
-):
+def exchange_reservation (reservation, instance_type, intance_count, platform, max_price_difference):
+
+    ec2 = get_client('ec2')
+
+    try:
+        reservation_waiter(reservation)
+
+    except WaiterException as error:
+        raise ExchangeException (error)
+
+    reservation_id = reservation['ReservedInstancesId']
+
     #Listagem de ofertas
-    reserved_instance_offerings = client.describe_reserved_instances_offerings(
-        Filters = [
-            {
-                'Name' : 'scope',
-                'Values': [reservation_description['Scope']]
-            },
-        ],
-        MinDuration = reservation_description['Duration'],
-        MaxDuration = reservation_description['Duration'],
-        InstanceType = target_instance_type,
-        OfferingClass = reservation_description['OfferingClass'],
-        ProductDescription = target_platform,
-        InstanceTenancy = reservation_description['InstanceTenancy'],
-        OfferingType = reservation_description['OfferingType']
-    )['ReservedInstancesOfferings']
+    try:
+        offering_id = get_exchange_offering(reservation, instance_type, platform)
 
-    number_of_offerings = len(reserved_instance_offerings)
+    except OfferingException as e:
+        raise ExchangeException(e)
 
-    if (number_of_offerings > 1):
-        raise ExchangeException("The search returned " + \
-                str(number_of_offerings) + \
-                "instance offering(s)\n" + \
-                "The exchange can't be done automatically\n" + \
-                "Exiting\n")
+    #Orçamento das Mudanças
+    try:
+        check_exchange_quote(reservation_id, offering_id, intance_count, max_price_difference)
 
-    #Orçamento da mudança
-    exchange_quote = client.get_reserved_instances_exchange_quote(
-        ReservedInstanceIds = [reservation_description['ReservedInstancesId']],
-        TargetConfigurations = [
-            {
-                'OfferingId': reserved_instance_offerings[0]['ReservedInstancesOfferingId']
-            },
-        ]
-    )
-    #Checagem de diferenca de preço
-    original_hourly_price = float(
-        exchange_quote['ReservedInstanceValueSet'][0]['ReservationValue']['HourlyPrice']
-    )
-    target_hourly_price = float(
-        exchange_quote['TargetConfigurationValueSet'][0]['ReservationValue']['HourlyPrice']
-    )
-    hourly_price_difference = target_hourly_price - original_hourly_price
-
-    if (hourly_price_difference > max_hourly_price_difference):
-        raise ExchangeException("The exchange will not be done\n" + \
-                "The target reservation hourly price is " + \
-                str(target_hourly_price) + "\n" + \
-                "The original reservation hourly price is " + \
-                str(original_hourly_price) + "\n" + \
-                "Exiting\n")
-
-    #Checagem da contagem de instancias
-    if (exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount'] 
-        != expected_intance_count):
-        raise ExchangeException("The instance count did not match\n" + \
-                "Instance Count by quotation: " + \
-                str(exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']) + \
-                "\n" + "Instance Count Expected: " + str (expected_intance_count) + "\n")
-
-    payment_pending = True
-
-    while (payment_pending):
-        payment_pending = verify_payment_pending(client)
-
-        if (payment_pending):
-            time.sleep(10)
+    except QuotationException as e:
+        raise ExchangeException(e)
     
     #Realizacao da troca
-    client.accept_reserved_instances_exchange_quote(
-        ReservedInstanceIds=[reservation_description['ReservedInstancesId']],
-        TargetConfigurations=[
-            {
-                'OfferingId': exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['OfferingId']
-            },
-        ]
+    ec2.accept_reserved_instances_exchange_quote(
+        ReservedInstanceIds=[reservation_id],
+        TargetConfigurations=[{'OfferingId': offering_id}]
     )
+    return
+
+def batch_exchange_reservation (reservation_list, target_params):
+
+    ec2 = get_client('ec2')
+
+    #Waiting for no payment pending status
+    wait_payment_pending(False)
+
+    index = 0
+    number_of_exchanges = 0
+
+    for reservation in reservation_list:
+        if (reservation['InstanceType'] != target_params['InstanceTypeList'][index]):
+            try:
+                exchange_reservation (
+                    reservation,    
+                    target_params["InstanceTypeList"][index], 
+                    target_params['InstanceCountList'][index], 
+                    target_params['PlatformList'][index],
+                    target_params['MaxPriceDifference']
+                )
+                number_of_exchanges += 1
+
+            except ExchangeException as e:
+                raise ExchangeException (e)
+
+        index += 1
+
     #Recuperando o ID da nova reserva
-    time_spent = 0
-    
-    while (not payment_pending):
-        payment_pending = verify_payment_pending(client)
+    wait_payment_pending(True)
 
-        if (not payment_pending):
-            time.sleep(10)
+    reservation_count = 0
+    reservation_list = []
 
-    new_reservation_description = client.describe_reserved_instances(
-        Filters=[
-            {
-                'Name': 'state',
-                'Values': ['payment-pending']
-            },
-        ],
-    )['ReservedInstances']
+    while (reservation_count != number_of_exchanges):
+        reservation_list = ec2.describe_reserved_instances(
+            Filters=[
+                {
+                    'Name': 'state',
+                    'Values': ['payment-pending']
+                },
+            ],
+        )['ReservedInstances']
 
-    for reservation in new_reservation_description:
-        if (reservation['InstanceCount']
-            == exchange_quote['TargetConfigurationValueSet'][0]['TargetConfiguration']['InstanceCount']):
-            return reservation
-    
-    raise ExchangeException("Could not retrieve new reservation ID")
+        reservation_count = len(reservation_list)
+
+        time.sleep(3)
+
+    return reservation_list
